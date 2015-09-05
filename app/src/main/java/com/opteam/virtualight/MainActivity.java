@@ -2,6 +2,7 @@ package com.opteam.virtualight;
 
 import android.app.Activity;
 import android.graphics.Bitmap;
+import android.graphics.Color;
 import android.graphics.PixelFormat;
 import android.graphics.SurfaceTexture;
 import android.graphics.drawable.BitmapDrawable;
@@ -11,17 +12,23 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.TextureView;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.TextView;
 
 import java.io.IOException;
 
 @SuppressWarnings("deprecation")
 public class MainActivity extends Activity implements TextureView.SurfaceTextureListener {
 
-    Camera mCamera;
-    boolean isOpen = false;
-    TextureView textureView;
+    private Camera mCamera;
+    private boolean isOpen = false;
 
-    ImageView rightView;
+    private TextureView leftView;
+    private ImageView rightView;
+
+    private View3DRenderer renderer;
+
+    private String timeTag = "TIME_TAG";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -29,11 +36,19 @@ public class MainActivity extends Activity implements TextureView.SurfaceTexture
         setContentView(R.layout.activity_main);
         getWindow().setFormat(PixelFormat.UNKNOWN);
 
-        textureView = (TextureView) findViewById(R.id.camera_preview_left);
-
+        leftView = (TextureView) findViewById(R.id.camera_preview_left);
         rightView = (ImageView) findViewById(R.id.camera_preview_right);
 
-        textureView.setSurfaceTextureListener(this);
+        leftView.setSurfaceTextureListener(this);
+
+        renderer = new View3DRenderer(this,
+                ((LinearLayout) findViewById(R.id.overlay_layer_layout)));
+
+        TextView textView = new TextView(this);
+        textView.setText("TIME");
+        textView.setTextSize(80);
+        textView.setTextColor(Color.WHITE);
+        renderer.addTextView(timeTag, textView);
     }
 
     @Override
@@ -72,7 +87,7 @@ public class MainActivity extends Activity implements TextureView.SurfaceTexture
     @Override
     public void onSurfaceTextureUpdated(SurfaceTexture surface) {
         // Invoked every time there's a new Camera preview frame
-        Bitmap image = textureView.getBitmap();
+        Bitmap image = leftView.getBitmap();
         BitmapDrawable bitmapDrawable = new BitmapDrawable(getResources(), image);
         rightView.setImageDrawable(bitmapDrawable);
     }

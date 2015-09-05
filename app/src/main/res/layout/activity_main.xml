@@ -1,19 +1,48 @@
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools" android:layout_width="match_parent"
-    android:layout_height="match_parent" tools:context=".MainActivity"
-    android:orientation="horizontal" >
+    android:layout_height="match_parent" tools:context=".MainActivity" >
 
-    <TextureView
-        android:id="@+id/camera_preview_left"
-        android:layout_width="0dp"
-        android:layout_weight="1"
-        android:layout_height="match_parent" />
+    <LinearLayout
+        android:id="@+id/camera_layer_layout"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="horizontal" >
 
-    <ImageView
-        android:id="@+id/camera_preview_right"
-        android:scaleType="centerCrop"
-        android:layout_width="0dp"
-        android:layout_weight="1"
-        android:layout_height="match_parent" />
+        <TextureView
+            android:id="@+id/camera_preview_left"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="match_parent" />
 
-</LinearLayout>
+        <ImageView
+            android:id="@+id/camera_preview_right"
+            android:scaleType="centerCrop"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="match_parent" />
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/overlay_layer_layout"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="horizontal" >
+
+        <RelativeLayout
+            android:id="@+id/left_overlay"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="match_parent">
+        </RelativeLayout>
+
+        <RelativeLayout
+            android:id="@+id/right_overlay"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="match_parent">
+        </RelativeLayout>
+
+    </LinearLayout>
+
+</RelativeLayout>
