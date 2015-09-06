@@ -35,6 +35,52 @@
             android:layout_width="0dp"
             android:layout_weight="1"
             android:layout_height="match_parent">
+
+            <ImageView
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:scaleType="fitXY"
+                android:src="@drawable/hud"/>
+
+            <TextView
+                android:id="@+id/status_view_left"
+                android:text="Status: Not connected"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="13dp"
+                android:textColor="@color/text_blue"
+                android:textSize="6sp"
+                android:gravity="center_horizontal" />
+
+            <TextClock
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_horizontal"
+                android:format12Hour="hh:mm:ss a"
+                android:layout_marginTop="40dp"
+                android:textSize="10sp"
+                android:textColor="@android:color/white" />
+
+            <TextView
+                android:id="@+id/speed_view_left"
+                android:text="Speed: 0.0 m/s"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_horizontal"
+                android:layout_marginTop="150dp"
+                android:textSize="10sp"
+                android:textColor="@android:color/white" />
+
+            <TextView
+                android:id="@+id/compass_view_left"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:layout_marginTop="156dp"
+                android:layout_marginLeft="37dp"
+                android:textSize="10sp"
+                android:textColor="@android:color/white" />
+
         </RelativeLayout>
 
         <RelativeLayout
@@ -42,6 +88,52 @@
             android:layout_width="0dp"
             android:layout_weight="1"
             android:layout_height="match_parent">
+
+            <ImageView
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:scaleType="fitXY"
+                android:src="@drawable/hud"/>
+
+            <TextView
+                android:id="@+id/status_view_right"
+                android:text="Status: Not connected"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="13dp"
+                android:textColor="@color/text_blue"
+                android:textSize="6sp"
+                android:gravity="center_horizontal" />
+
+            <TextClock
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_horizontal"
+                android:format12Hour="hh:mm:ss a"
+                android:layout_marginTop="40dp"
+                android:textSize="10sp"
+                android:textColor="@android:color/white" />
+
+            <TextView
+                android:id="@+id/speed_view_right"
+                android:text="Speed: 0.0 m/s"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_horizontal"
+                android:layout_marginTop="150dp"
+                android:textSize="10sp"
+                android:textColor="@android:color/white" />
+
+            <TextView
+                android:id="@+id/compass_view_right"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:layout_marginTop="156dp"
+                android:layout_marginLeft="37dp"
+                android:textSize="10sp"
+                android:textColor="@android:color/white" />
+
         </RelativeLayout>
 
     </LinearLayout>

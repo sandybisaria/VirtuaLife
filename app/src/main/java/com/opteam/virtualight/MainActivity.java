@@ -10,6 +10,13 @@ import android.graphics.PixelFormat;
 import android.graphics.SurfaceTexture;
 import android.graphics.drawable.BitmapDrawable;
 import android.hardware.Camera;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
+import android.location.Location;
+import android.location.LocationListener;
+import android.location.LocationManager;
 import android.os.Bundle;
 import android.util.Log;
 import android.util.Size;
@@ -26,16 +33,16 @@ import android.widget.RelativeLayout;
 import android.widget.TextView;
 
 import com.getpebble.android.kit.PebbleKit;
+import com.getpebble.android.kit.util.PebbleDictionary;
 
 import java.io.IOException;
 import java.util.UUID;
 
 @SuppressWarnings("deprecation")
-public class MainActivity extends Activity implements TextureView.SurfaceTextureListener {
+public class MainActivity extends Activity implements TextureView.SurfaceTextureListener, SensorEventListener{
     private static final String TAG = "MAINACTIVITY";
 
     private static final UUID PEBBLE_UUID = UUID.fromString("03c9f6cc-e9e4-4697-893f-90ecc16aa768");
-    private boolean isAppLaunched = false;
 
     private Camera mCamera;
     private boolean isOpen = false;
@@ -43,10 +50,23 @@ public class MainActivity extends Activity implements TextureView.SurfaceTexture
     private TextureView leftView;
     private ImageView rightView;
 
-    private View3DRenderer renderer;
+    private TextView statusViewLeft;
+    private TextView statusViewRight;
 
-    private final String statusTag = "STATUS";
-    private TextView statusView;
+    private TextView speedViewLeft;
+    private TextView speedViewRight;
+
+    private TextView compassViewLeft;
+    private TextView compassViewRight;
+    private SensorManager mSensorManager;
+    private Sensor mAccelerometer;
+    private float[] mGravity;
+    private Sensor mMagnetometer;
+    private float[] mGeomagnetic;
+
+    private PebbleKit.PebbleDataReceiver pebbleDataReceiver;
+    private final int TESTKEY = 5;
+    private final int ACCELKEY = 25;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -61,24 +81,68 @@ public class MainActivity extends Activity implements TextureView.SurfaceTexture
 
         leftView.setSurfaceTextureListener(this);
 
-        renderer = new View3DRenderer(this,
-                ((LinearLayout) findViewById(R.id.overlay_layer_layout)));
+        statusViewLeft = (TextView) findViewById(R.id.status_view_left);
+        statusViewRight = (TextView) findViewById(R.id.status_view_right);
+        updateStatusViews();
 
-        statusView = new TextView(this);
-        statusView.setTextColor(Color.WHITE);
-        statusView.setTextSize(10);
-        statusView.setText(getPebbleStatusMessage());
-        statusView.setGravity(Gravity.CENTER_HORIZONTAL);
-        ViewGroup.LayoutParams params = new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT);
-        statusView.setLayoutParams(params);
-        renderer.addTextView(statusTag, statusView);
+        pebbleDataReceiver = new PebbleKit.PebbleDataReceiver(PEBBLE_UUID) {
+            @Override
+            public void receiveData(Context context, int transactionId, PebbleDictionary data) {
+                try {
+                    long testData = data.getInteger(TESTKEY);
+                    Log.d(TAG, Long.toString(testData));
+                } catch (NullPointerException e) {
+
+                }
+                try {
+                    String accelData = data.getString(ACCELKEY);
+//                    String[] splitData = accelData.split(",");
+//                    AccelData sample = new AccelData(splitData);
+                } catch (NullPointerException e) {
+
+                }
+
+                PebbleKit.sendAckToPebble(getApplicationContext(), transactionId);
+            }
+        };
+
+        speedViewLeft = (TextView) findViewById(R.id.speed_view_left);
+        speedViewRight = (TextView) findViewById(R.id.speed_view_right);
+        LocationManager locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
+        LocationListener locationListener = new LocationListener() {
+            public void onLocationChanged(Location location) {
+                updateSpeedViews(location);
+            }
+
+            public void onStatusChanged(String provider, int status, Bundle extras) {}
+
+            public void onProviderEnabled(String provider) {}
+
+            public void onProviderDisabled(String provider) {}
+        };
+        locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, locationListener);
+        updateSpeedViews(locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER));
+
+        compassViewLeft = (TextView) findViewById(R.id.compass_view_left);
+        compassViewRight = (TextView) findViewById(R.id.compass_view_right);
+        mSensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
+        if (mSensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD) != null) {
+            mMagnetometer = mSensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
+        }
+        if (mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER) != null) {
+            mAccelerometer = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+        }
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+
         BroadcastReceiver statusReceiver = new BroadcastReceiver() {
 
             @Override
             public void onReceive(Context context, Intent intent) {
-                statusView.setText(getPebbleStatusMessage());
-                renderer.updateTextView(statusTag, statusView);
+                updateStatusViews();
             }
 
         };
@@ -86,11 +150,109 @@ public class MainActivity extends Activity implements TextureView.SurfaceTexture
         PebbleKit.registerPebbleConnectedReceiver(getApplicationContext(), statusReceiver);
         PebbleKit.registerPebbleDisconnectedReceiver(getApplicationContext(), statusReceiver);
         PebbleKit.startAppOnPebble(getApplicationContext(), PEBBLE_UUID);
+
+        PebbleKit.registerReceivedDataHandler(this, pebbleDataReceiver);
+
+        mSensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
+        mSensorManager.registerListener(this, mAccelerometer, SensorManager.SENSOR_DELAY_UI);
+        mSensorManager.registerListener(this, mMagnetometer, SensorManager.SENSOR_DELAY_UI);
     }
 
-    private String getPebbleStatusMessage() {
+    @Override
+    protected void onPause() {
+        super.onPause();
+
+        PebbleKit.closeAppOnPebble(getApplicationContext(), PEBBLE_UUID);
+
+        PebbleKit.registerPebbleConnectedReceiver(getApplicationContext(), null);
+        PebbleKit.registerPebbleDisconnectedReceiver(getApplicationContext(), null);
+        unregisterReceiver(pebbleDataReceiver);
+
+        mSensorManager.unregisterListener(this, mAccelerometer);
+        mSensorManager.unregisterListener(this, mMagnetometer);
+    }
+
+    private void updateStatusViews() {
         boolean connected = PebbleKit.isWatchConnected(getApplicationContext());
-        return "Status: " + (connected ? "Connected" : "Not connected");
+        String message = "Status: " + (connected ? "Connected" : "Not connected");
+        int color = (connected ? getResources().getColor(R.color.text_blue) :
+            getResources().getColor(R.color.text_red));
+        statusViewLeft.setText(message);
+        statusViewRight.setText(message);
+        statusViewLeft.setTextColor(color);
+        statusViewRight.setTextColor(color);
+    }
+
+    private void updateSpeedViews(Location location) {
+        if (location == null) {
+            return;
+        }
+        if (location.hasSpeed()) {
+            speedViewLeft.setText("Speed: " + Float.toString(location.getSpeed()) + "m/s");
+            speedViewRight.setText("Speed: " + Float.toString(location.getSpeed()) + "m/s");
+        }
+    }
+
+    @Override
+    public void onSensorChanged(SensorEvent event) {
+        if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER)
+            mGravity = event.values;
+        if (event.sensor.getType() == Sensor.TYPE_MAGNETIC_FIELD)
+            mGeomagnetic = event.values;
+        if (mGravity != null && mGeomagnetic != null) {
+            float R[] = new float[9];
+            float I[] = new float[9];
+            boolean success = SensorManager.getRotationMatrix(R, I, mGravity,
+                    mGeomagnetic);
+            if (success) {
+                float orientation[] = new float[3];
+                SensorManager.getOrientation(R, orientation);
+                for (int idx = 0; idx < orientation.length; idx++) {
+                    orientation[idx] = (float) Math.toDegrees(orientation[idx]);
+                }
+//                Log.d(TAG, Float.toString(orientation[0]) + " "  + Float.toString(orientation[1]) + " "  + Float.toString(orientation[2]));
+                if (orientation[2] > -94 && orientation[2] < -86) {
+                    compassViewLeft.setText(getDirection(orientation[0]));
+                    compassViewRight.setText(getDirection(orientation[0]));
+                    if (compassViewLeft.getText().equals("N")) {
+                        compassViewLeft.setTextColor(getResources()
+                                .getColor(com.opteam.virtualight.R.color.text_red));
+                        compassViewRight.setTextColor(getResources()
+                                .getColor(com.opteam.virtualight.R.color.text_red));
+                    } else {
+                        compassViewLeft.setTextColor(Color.WHITE);
+                        compassViewRight.setTextColor(Color.WHITE);
+                    }
+                } else {
+                    compassViewLeft.setText("");
+                    compassViewRight.setText("");
+                }
+            }
+        }
+    }
+
+    @Override
+    public void onAccuracyChanged(Sensor sensor, int accuracy) {
+
+    }
+
+    private String getDirection(float azimuthDegree) {
+        if (azimuthDegree > 157.5 || azimuthDegree < -157.5)
+            return "S";
+        else if (azimuthDegree > 112.5)
+            return "SW";
+        else if (azimuthDegree > 67.5)
+            return "W";
+        else if (azimuthDegree > 22.5)
+            return "NW";
+        else if (azimuthDegree > -22.5)
+            return "N";
+        else if (azimuthDegree > -67.5)
+            return "NE";
+        else if (azimuthDegree > -112.5)
+            return "E";
+        else
+            return "SE";
     }
 
     @Override
@@ -100,6 +262,10 @@ public class MainActivity extends Activity implements TextureView.SurfaceTexture
         }
 
         try {
+            if (mCamera == null) {
+                return;
+            }
+
             Camera.Parameters parameters = mCamera.getParameters();
             parameters.setFocusMode(Camera.Parameters.FOCUS_MODE_AUTO);
             int[] bestFps = parameters.getSupportedPreviewFpsRange().get(1);
@@ -120,6 +286,7 @@ public class MainActivity extends Activity implements TextureView.SurfaceTexture
             parameters.setPreviewSize(bestSize.width, bestSize.height);
 
             mCamera.setParameters(parameters);
+
             mCamera.setPreviewTexture(surface);
             mCamera.startPreview();
         } catch (IOException e) {
