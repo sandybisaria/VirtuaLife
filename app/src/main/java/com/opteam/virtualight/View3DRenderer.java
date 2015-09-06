@@ -26,9 +26,9 @@ public class View3DRenderer {
 
     HashMap<String, View[]> viewHashMap = new HashMap<>();
 
-    public View getView(String tag) {
-        return viewHashMap.get(tag)[0];
-    }
+//    public View getView(String tag) {
+//        return viewHashMap.get(tag)[0];
+//    }
 
     public void addTextView(String tag, TextView leftTextView) {
         TextView rightTextView = new TextView(mContext);
@@ -47,6 +47,8 @@ public class View3DRenderer {
         rightTextView.setTextColor(leftTextView.getCurrentTextColor());
         rightTextView.setTextSize(TypedValue.COMPLEX_UNIT_PX, leftTextView.getTextSize());
         rightTextView.setText(leftTextView.getText());
+        rightTextView.setGravity(leftTextView.getGravity());
+        rightTextView.setLayoutParams(leftTextView.getLayoutParams());
     }
 
     public void updateTextView(String tag, TextView leftTextView) {
