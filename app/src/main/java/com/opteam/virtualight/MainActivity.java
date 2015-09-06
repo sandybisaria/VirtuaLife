@@ -19,16 +19,11 @@ import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
 import android.util.Log;
-import android.util.Size;
-import android.view.Gravity;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.TextureView;
 import android.view.View;
-import android.view.ViewGroup;
-import android.widget.FrameLayout;
 import android.widget.ImageView;
-import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 
@@ -36,6 +31,7 @@ import com.getpebble.android.kit.PebbleKit;
 import com.getpebble.android.kit.util.PebbleDictionary;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.UUID;
 
 @SuppressWarnings("deprecation")
@@ -47,14 +43,17 @@ public class MainActivity extends Activity implements TextureView.SurfaceTexture
     private Camera mCamera;
     private boolean isOpen = false;
 
+    private int padding = -1;
+    private int sidePadding = -1;
+
     private TextureView leftView;
     private ImageView rightView;
 
     private TextView statusViewLeft;
     private TextView statusViewRight;
 
-    private TextView speedViewLeft;
-    private TextView speedViewRight;
+    private TextView activityViewLeft;
+    private TextView activityViewRight;
 
     private TextView compassViewLeft;
     private TextView compassViewRight;
@@ -96,8 +95,9 @@ public class MainActivity extends Activity implements TextureView.SurfaceTexture
                 }
                 try {
                     String accelData = data.getString(ACCELKEY);
-//                    String[] splitData = accelData.split(",");
-//                    AccelData sample = new AccelData(splitData);
+                    String[] splitData = accelData.split(",");
+                    AccelData sample = new AccelData(splitData);
+                    performAnalyses(sample);
                 } catch (NullPointerException e) {
 
                 }
@@ -106,12 +106,12 @@ public class MainActivity extends Activity implements TextureView.SurfaceTexture
             }
         };
 
-        speedViewLeft = (TextView) findViewById(R.id.speed_view_left);
-        speedViewRight = (TextView) findViewById(R.id.speed_view_right);
+        activityViewLeft = (TextView) findViewById(R.id.activity_view_left);
+        activityViewRight = (TextView) findViewById(R.id.activity_view_right);
         LocationManager locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
         LocationListener locationListener = new LocationListener() {
             public void onLocationChanged(Location location) {
-                updateSpeedViews(location);
+
             }
 
             public void onStatusChanged(String provider, int status, Bundle extras) {}
@@ -121,7 +121,7 @@ public class MainActivity extends Activity implements TextureView.SurfaceTexture
             public void onProviderDisabled(String provider) {}
         };
         locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, locationListener);
-        updateSpeedViews(locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER));
+//        updateSpeedViews(locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER));
 
         compassViewLeft = (TextView) findViewById(R.id.compass_view_left);
         compassViewRight = (TextView) findViewById(R.id.compass_view_right);
@@ -162,6 +162,11 @@ public class MainActivity extends Activity implements TextureView.SurfaceTexture
     protected void onPause() {
         super.onPause();
 
+        if (padding >= 0) {
+            RelativeLayout mainLayout = (RelativeLayout) findViewById(R.id.main_activity_layout);
+            mainLayout.setPadding(sidePadding, padding, sidePadding, padding);
+        }
+
         PebbleKit.closeAppOnPebble(getApplicationContext(), PEBBLE_UUID);
 
         PebbleKit.registerPebbleConnectedReceiver(getApplicationContext(), null);
@@ -170,6 +175,60 @@ public class MainActivity extends Activity implements TextureView.SurfaceTexture
 
         mSensorManager.unregisterListener(this, mAccelerometer);
         mSensorManager.unregisterListener(this, mMagnetometer);
+    }
+
+    private final int LIMIT = 20;
+    ArrayList<AccelData> dataArrayList = new ArrayList<>();
+
+    private void performAnalyses(AccelData data) {
+        if (dataArrayList.size() < LIMIT) {
+            dataArrayList.add(data);
+        } else {
+            double xMean = 0;
+            double yMean = 0;
+            double zMean = 0;
+            for (AccelData datum : dataArrayList) {
+                xMean += datum.getxAcceleration();
+                yMean += datum.getyAcceleration();
+                zMean += datum.getzAcceleration();
+            }
+            xMean /= LIMIT;
+            yMean /= LIMIT;
+            zMean /= LIMIT;
+            double xStandardDeviation = 0;
+            double yStandardDeviation = 0;
+            double zStandardDeviation = 0;
+            for (AccelData datum : dataArrayList) {
+                xStandardDeviation += Math.pow(datum.getxAcceleration() - xMean, 2);
+                yStandardDeviation += Math.pow(datum.getyAcceleration() - yMean, 2);
+                zStandardDeviation += Math.pow(datum.getzAcceleration() - zMean, 2);
+            }
+            xStandardDeviation /= LIMIT;
+            yStandardDeviation /= LIMIT;
+            zStandardDeviation /= LIMIT;
+            xStandardDeviation = Math.sqrt(xStandardDeviation);
+            yStandardDeviation = Math.sqrt(yStandardDeviation);
+            zStandardDeviation = Math.sqrt(zStandardDeviation);
+            double xRatio = Math.abs(xStandardDeviation / xMean);
+            double yRatio = Math.abs(yStandardDeviation / yMean);
+            double zRatio = Math.abs(zStandardDeviation / zMean);
+            String summaryString = Double.toString(xRatio) + " " + Double.toString(yRatio) + " " + Double.toString(zRatio);
+            Log.d(TAG, summaryString);
+
+            if (xRatio < 0.15 && yRatio < 0.2) {
+                updateActivityViews("standing");
+            } else if (xRatio < 0.35 && yRatio < 0.5) {
+                updateActivityViews("walking");
+            } else if (xRatio < 0.5 && yRatio < 1.5) {
+                updateActivityViews("speed-walking");
+            } else if (xRatio < 2 && yRatio < 3) {
+                updateActivityViews("jogging");
+            } else {
+                updateActivityViews("moving");
+            }
+
+            dataArrayList.clear();
+        }
     }
 
     private void updateStatusViews() {
@@ -183,14 +242,9 @@ public class MainActivity extends Activity implements TextureView.SurfaceTexture
         statusViewRight.setTextColor(color);
     }
 
-    private void updateSpeedViews(Location location) {
-        if (location == null) {
-            return;
-        }
-        if (location.hasSpeed()) {
-            speedViewLeft.setText("Speed: " + Float.toString(location.getSpeed()) + "m/s");
-            speedViewRight.setText("Speed: " + Float.toString(location.getSpeed()) + "m/s");
-        }
+    private void updateActivityViews(String status) {
+        activityViewLeft.setText("You are " + status);
+        activityViewRight.setText("You are " + status);
     }
 
     @Override
@@ -282,6 +336,9 @@ public class MainActivity extends Activity implements TextureView.SurfaceTexture
 
             RelativeLayout mainLayout = (RelativeLayout) findViewById(R.id.main_activity_layout);
             mainLayout.setPadding(sidePadding, padding, sidePadding, padding);
+
+            this.padding = padding;
+            this.sidePadding = sidePadding;
 
             parameters.setPreviewSize(bestSize.width, bestSize.height);
 

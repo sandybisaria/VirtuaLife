@@ -62,8 +62,7 @@
                 android:textColor="@android:color/white" />
 
             <TextView
-                android:id="@+id/speed_view_left"
-                android:text="Speed: 0.0 m/s"
+                android:id="@+id/activity_view_left"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:gravity="center_horizontal"
@@ -80,6 +79,14 @@
                 android:layout_marginLeft="37dp"
                 android:textSize="10sp"
                 android:textColor="@android:color/white" />
+
+            <!--<TextView-->
+                <!--android:id="@+id/location_view_left"-->
+                <!--android:layout_width="match_parent"-->
+                <!--android:layout_height="wrap_content"-->
+                <!--android:gravity="center"-->
+                <!--android:layout_marginTop="80dp"-->
+                <!--android:textColor="@android:color/white" />-->
 
         </RelativeLayout>
 
@@ -115,8 +122,7 @@
                 android:textColor="@android:color/white" />
 
             <TextView
-                android:id="@+id/speed_view_right"
-                android:text="Speed: 0.0 m/s"
+                android:id="@+id/activity_view_right"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:gravity="center_horizontal"

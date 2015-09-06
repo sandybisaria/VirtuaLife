@@ -22,4 +22,20 @@ public class AccelData {
                 ", timeMillis=" + timeMillis +
                 '}';
     }
+
+    public int getxAcceleration() {
+        return xAcceleration;
+    }
+
+    public int getyAcceleration() {
+        return yAcceleration;
+    }
+
+    public int getzAcceleration() {
+        return zAcceleration;
+    }
+
+    public long getTimeMillis() {
+        return timeMillis;
+    }
 }
